@@ -27,6 +27,9 @@ gerçek zamanlı yönetim paneli ve güvenlik kurallarıyla korunan Firebase bac
 - **Gerçek zamanlı yönetim paneli** (`/admin`): Yeni randevular sayfa yenilemeden düşer. Onaylama, "geldi" işaretleme ve
   iptal yapılabilir; iptal edilen saat otomatik olarak tekrar randevuya açılır. Mesaj kutusu ve bülten listesinin Excel'e
   aktarımı da paneldedir.
+- **Gizlilik (KVKK/GDPR):** Site gezilirken hiçbir üçüncü taraf sunucuya istek gitmez. Yazı tipi ve görseller siteyle
+  birlikte sunulur (Google Fonts veya CDN yok), Google Haritalar yalnızca ziyaretçi onay verirse yüklenir. Tek dış
+  bağlantı, randevu adımında projenin kendi Firestore veritabanına (AB – Frankfurt) yapılır.
 - **Performans:** Firebase SDK'sı ve yönetim paneli ayrı parçalara bölünmüştür (code splitting). Ana sayfa açılırken
   Firestore yüklenmez, yalnızca kullanıcı randevu adımına geldiğinde indirilir.
 - **Form deneyimi:** TC Kimlik No algoritma doğrulaması, telefonun yazarken otomatik biçimlenmesi, alan bazında anlık
@@ -100,3 +103,9 @@ Kendi Firebase projenize bağlamak için:
 5. Authentication'dan bir kullanıcı oluşturun ve Firestore'da `admins/{kullanıcı UID}` belgesini ekleyin.
    Bu kullanıcı `/admin` adresinden panele girebilir.
 6. Yayın için `npm run build`, ardından `firebase deploy --only hosting`.
+
+## Kaynaklar
+
+- Hekim portreleri: [randomuser.me](https://randomuser.me) (örnek amaçlı, `public/doctors` altında barındırılır)
+- Yazı tipi: [Plus Jakarta Sans](https://fonts.google.com/specimen/Plus+Jakarta+Sans) (SIL Open Font License, Fontsource üzerinden)
+- İkonlar: [Lucide](https://lucide.dev)

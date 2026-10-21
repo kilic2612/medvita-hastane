@@ -1,5 +1,7 @@
 import { lazy, StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
+// Yazı tipi siteyle birlikte sunulur; ziyaretçinin IP adresi Google Fonts'a gitmez.
+import '@fontsource-variable/plus-jakarta-sans';
 import App from './App';
 import './index.css';
 

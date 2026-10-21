@@ -11,8 +11,8 @@ export interface Doctor {
   languages: string[];
 }
 
-// Örnek portreler; gerçek hekim fotoğraflarıyla değiştirilmelidir.
-const portrait = (gender: 'men' | 'women', n: number) => `https://randomuser.me/api/portraits/${gender}/${n}.jpg`;
+// Örnek portreler (kaynak: randomuser.me) public/doctors altında siteyle birlikte sunulur; dış sunucuya istek gitmez.
+const portrait = (gender: 'men' | 'women', n: number) => `/doctors/${gender}-${n}.jpg`;
 
 export const doctors: Doctor[] = [
   { id: 'ahmet-yilmaz', title: 'Prof. Dr.', name: 'Ahmet Yılmaz', departmentId: 'kardiyoloji', specialty: 'Girişimsel Kardiyoloji', experience: 24, rating: 4.9, reviews: 312, photo: portrait('men', 32), languages: ['TR', 'EN'] },
