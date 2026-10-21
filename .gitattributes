@@ -1,0 +1,4 @@
+# Satır sonlarını depoda LF olarak tutar (Windows/macOS/Linux arasında tutarlılık).
+* text=auto eol=lf
+*.jpg binary
+*.png binary
