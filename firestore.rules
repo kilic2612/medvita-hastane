@@ -1,0 +1,97 @@
+rules_version = '2';
+
+// Veri modeli
+// - appointments/{id}  : Randevular. Herkes oluşturabilir; yalnızca yöneticiler okuyabilir/güncelleyebilir.
+// - slots/{doctorId_date_time} : Dolu saatler. Kişisel veri içermez, herkese açık okunur.
+//   Randevu ve slot aynı batch içinde yazılır; slot zaten varsa yazma "update" sayılır ve reddedilir.
+//   Böylece aynı hekime aynı saatte ikinci randevu veritabanı seviyesinde engellenir.
+// - messages/{id}      : İletişim formu mesajları.
+// - subscribers/{email}: Bülten aboneleri (belge kimliği = küçük harfli e-posta, mükerrer kaydı önler).
+// - admins/{uid}       : Ek yöneticiler. Firebase konsolundan, belge kimliği kullanıcının UID'si olacak şekilde eklenir.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // İlk (kurucu) yönetici hesabı UID ile tanımlıdır; UID'ler istemci tarafından seçilemez.
+    function isAdmin() {
+      return request.auth != null
+        && (request.auth.uid in ['yonetici-1']
+          || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+
+    function isStr(v, min, max) {
+      return v is string && v.size() >= min && v.size() <= max;
+    }
+
+    function docPath(collection, id) {
+      return /databases/$(database)/documents/$(collection)/$(id);
+    }
+
+    function validPatient(p) {
+      return p is map
+        && p.keys().hasAll(['fullName', 'tc', 'phone', 'email', 'notes'])
+        && p.keys().hasOnly(['fullName', 'tc', 'phone', 'email', 'notes'])
+        && isStr(p.fullName, 3, 80)
+        && p.tc is string && p.tc.matches('^[1-9][0-9]{10}$')
+        && p.phone is string && p.phone.matches('^05[0-9]{9}$')
+        && isStr(p.email, 0, 120)
+        && isStr(p.notes, 0, 500);
+    }
+
+    function validAppointment(d) {
+      return d.keys().hasAll(['code', 'departmentId', 'doctorId', 'date', 'time', 'slotId', 'patient', 'status', 'createdAt'])
+        && d.keys().hasOnly(['code', 'departmentId', 'doctorId', 'date', 'time', 'slotId', 'patient', 'status', 'createdAt'])
+        && isStr(d.code, 4, 20)
+        && isStr(d.departmentId, 1, 40)
+        && isStr(d.doctorId, 1, 40)
+        && d.date is string && d.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && d.time is string && d.time.matches('^[0-9]{2}:[0-9]{2}$')
+        && d.slotId == d.doctorId + '_' + d.date + '_' + d.time
+        && d.status == 'pending'
+        && d.createdAt == request.time
+        && validPatient(d.patient);
+    }
+
+    match /admins/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    match /appointments/{id} {
+      allow create: if validAppointment(request.resource.data)
+        && existsAfter(docPath('slots', request.resource.data.slotId))
+        && getAfter(docPath('slots', request.resource.data.slotId)).data.appointmentId == id;
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /slots/{slotId} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['doctorId', 'date', 'time', 'appointmentId'])
+        && slotId == request.resource.data.doctorId + '_' + request.resource.data.date + '_' + request.resource.data.time
+        && existsAfter(docPath('appointments', request.resource.data.appointmentId))
+        && getAfter(docPath('appointments', request.resource.data.appointmentId)).data.slotId == slotId;
+      // İptal edilen randevunun saati, yönetici slotu silerek tekrar boşa çıkarır.
+      allow delete: if isAdmin();
+      allow update: if false;
+    }
+
+    match /messages/{id} {
+      allow create: if request.resource.data.keys().hasAll(['name', 'email', 'phone', 'subject', 'message', 'read', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['name', 'email', 'phone', 'subject', 'message', 'read', 'createdAt'])
+        && isStr(request.resource.data.name, 3, 80)
+        && isStr(request.resource.data.email, 5, 120)
+        && isStr(request.resource.data.phone, 0, 20)
+        && isStr(request.resource.data.subject, 1, 60)
+        && isStr(request.resource.data.message, 10, 1000)
+        && request.resource.data.read == false
+        && request.resource.data.createdAt == request.time;
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /subscribers/{email} {
+      allow create: if request.resource.data.keys().hasOnly(['email', 'createdAt'])
+        && request.resource.data.email == email
+        && isStr(email, 5, 120)
+        && request.resource.data.createdAt == request.time;
+      allow read, delete: if isAdmin();
+    }
+  }
+}
